@@ -62,6 +62,11 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
                     llvm::outs() << nd->getQualifiedNameAsString() << "\n";
                 }
             }
+            else {
+                llvm::outs() << "Unknown:\t";
+                llvm::outs() << nd->getDeclKindName() << "\t";
+                llvm::outs() << nd->getQualifiedNameAsString() << "\n";
+            }
             return true;
 		}
 

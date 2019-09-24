@@ -1,6 +1,10 @@
 #include <sstream>
 #include <string>
+#include <string.h>
+#include <strings.h>
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceManager.h"
+
 #include "clang/AST/AST.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ASTConsumer.h"
@@ -33,39 +37,61 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
 
 		bool VisitDecl(Decl *d) {
-            const NamedDecl *nd = dyn_cast<NamedDecl>(d);
-            if(d->isFunctionOrFunctionTemplate()){
-                if(d->hasBody()){
-                    llvm::outs() << "function:\t";
+            if(!d)
+                return true;
+            if(const NamedDecl *nd = dyn_cast<NamedDecl>(d)){
+                if(d->isFunctionOrFunctionTemplate() && d->hasBody()){
+                    llvm::outs() << "FunctionDecl:\t";
                     llvm::outs() << nd->getDeclKindName() << "\t";
-                    llvm::outs() << nd->getQualifiedNameAsString() << "\n";
+                    llvm::outs() << nd->getQualifiedNameAsString() << "\t";
+                    // std::string beginloc = d->getBeginLoc().printToString(TheContext.getSourceManager());
+                    // std::string endloc = d->getEndLoc().printToString(TheContext.getSourceManager());
+                    // std::string b = beginloc.substr(beginloc.rfind(':')+1);
+                    // llvm::outs() << b << '\n';
+                    // llvm::outs() << beginloc << '\n';
+                    // std::string e = endloc.substr(endloc.rfind(':')+1);
+                    // llvm::outs() << e << '\n';
+                    // llvm::outs() << endloc << '\n';
+                    // nd->getBeginLoc().dump(TheContext.getSourceManager());
+                    // nd->getEndLoc().dump(TheContext.getSourceManager());
+                    //nd->getLocation().dump(TheContext.getSourceManager());
+                    //nd->getSourceRange().dump(TheContext.getSourceManager());
+                    llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
+                    
                 }
-            }
-            else if(const VarDecl *vd = dyn_cast<VarDecl>(d)) {
-                if(vd->isLocalVarDecl()){
-                    const NamedDecl *tmpnd = dyn_cast<NamedDecl>(vd->getParentFunctionOrMethod());
-                    //llvm::outs() << "localvar:\t";
-                    llvm::outs() << tmpnd->getNameAsString()<< ":\t";
-                    llvm::outs() << nd->getDeclKindName() << "\t";
-                    llvm::outs() << nd->getQualifiedNameAsString() << "\n";
-                }
-                else if(const ParmVarDecl *pvd = dyn_cast<ParmVarDecl>(d)){
-                    const NamedDecl *tmpnd = dyn_cast<NamedDecl>(vd->getParentFunctionOrMethod());
-                    //llvm::outs() << "localvar:\t";
-                    llvm::outs() << tmpnd->getNameAsString()<< ":\t";
-                    llvm::outs() << nd->getDeclKindName() << "\t";
-                    llvm::outs() << nd->getQualifiedNameAsString() << "\n";
+                else if(const VarDecl *vd = dyn_cast<VarDecl>(d)) {
+                    if(vd->isLocalVarDecl()){
+                        const NamedDecl *tmpnd = dyn_cast<NamedDecl>(vd->getParentFunctionOrMethod());
+                        llvm::outs() << "LocalDecl:\t";
+                        llvm::outs() << tmpnd->getNameAsString()<< ":\t";
+                        llvm::outs() << nd->getDeclKindName() << "\t";
+                        llvm::outs() << nd->getQualifiedNameAsString() << "\t";
+                        llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
+                    }
+                    else if(const ParmVarDecl *pvd = dyn_cast<ParmVarDecl>(d)){
+                        const NamedDecl *tmpnd = dyn_cast<NamedDecl>(vd->getParentFunctionOrMethod());
+                        //llvm::outs() << "localvar:\t";
+                        if(tmpnd->hasBody()){
+                            llvm::outs() << "ParmDecl:\t";
+                            llvm::outs() << tmpnd->getNameAsString()<< ":\t";
+                            llvm::outs() << nd->getDeclKindName() << "\t";
+                            llvm::outs() << nd->getQualifiedNameAsString() << "\t";
+                            llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
+                        }
+                    }
+                    else {
+                        llvm::outs() << "GlobalDecl:\t";
+                        llvm::outs() << nd->getDeclKindName() << "\t";
+                        llvm::outs() << nd->getQualifiedNameAsString() << "\t";
+                        llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
+                    }
                 }
                 else {
-                    llvm::outs() << "Global:\t";
+                    llvm::outs() << "UnknownDecl:\t";
                     llvm::outs() << nd->getDeclKindName() << "\t";
-                    llvm::outs() << nd->getQualifiedNameAsString() << "\n";
+                    llvm::outs() << nd->getQualifiedNameAsString() << "\t";
+                    llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
                 }
-            }
-            else {
-                llvm::outs() << "Unknown:\t";
-                llvm::outs() << nd->getDeclKindName() << "\t";
-                llvm::outs() << nd->getQualifiedNameAsString() << "\n";
             }
             return true;
 		}

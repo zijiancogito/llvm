@@ -2,6 +2,7 @@
 #include <string>
 #include <string.h>
 #include <strings.h>
+#include <regex>
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 
@@ -37,25 +38,15 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
 
 		bool VisitDecl(Decl *d) {
-            if(!d)
+            if(!d){
+                llvm::errs() << "Decl is NULL!\n";
                 return true;
+            }
             if(const NamedDecl *nd = dyn_cast<NamedDecl>(d)){
                 if(d->isFunctionOrFunctionTemplate() && d->hasBody()){
                     llvm::outs() << "FunctionDecl:\t";
                     llvm::outs() << nd->getDeclKindName() << "\t";
                     llvm::outs() << nd->getQualifiedNameAsString() << "\t";
-                    // std::string beginloc = d->getBeginLoc().printToString(TheContext.getSourceManager());
-                    // std::string endloc = d->getEndLoc().printToString(TheContext.getSourceManager());
-                    // std::string b = beginloc.substr(beginloc.rfind(':')+1);
-                    // llvm::outs() << b << '\n';
-                    // llvm::outs() << beginloc << '\n';
-                    // std::string e = endloc.substr(endloc.rfind(':')+1);
-                    // llvm::outs() << e << '\n';
-                    // llvm::outs() << endloc << '\n';
-                    // nd->getBeginLoc().dump(TheContext.getSourceManager());
-                    // nd->getEndLoc().dump(TheContext.getSourceManager());
-                    //nd->getLocation().dump(TheContext.getSourceManager());
-                    //nd->getSourceRange().dump(TheContext.getSourceManager());
                     llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
                     
                 }
@@ -86,6 +77,12 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
                         llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
                     }
                 }
+                else if(const TagDecl *td = dyn_cast<TagDecl>(d)){
+                    llvm::outs() << "TagDecl:\t";
+                    llvm::outs() << nd->getDeclKindName() << "\t";
+                    llvm::outs() << nd->getQualifiedNameAsString() << "\t";
+                    llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';
+                }
                 else {
                     llvm::outs() << "UnknownDecl:\t";
                     llvm::outs() << nd->getDeclKindName() << "\t";
@@ -105,36 +102,32 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 // by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 	public:
-		MyASTConsumer(ASTContext &C, Rewriter &R) : Visitor(C, R) { }
+		MyASTConsumer(ASTContext &C, Rewriter &R) : Visitor(C, R), C(C) { }
             //Visitor.TraverseAST(C);
 
 		// Override the method that gets called for each parsed top-level
 		// declaration.
         void HandleTranslationUnit(ASTContext &Ctx) override{
-            // DeclContext::decl_range Decls = Ctx.getTranslationUnitDecl()->decls();
-            // for(DeclContext::decl_iterator b=Decls.begin(), e=Decls.end(); b!=e; ++b) {
-            //     llvm::outs() << b->getDeclKindName() << "\n";
-            //     llvm::outs() << (*b)->getDeclContext()->getDeclKindName() << '\n';
-            //     llvm::outs() << "+---------------------------------------+\n";
-            //     Visitor.TraverseAST((*b)->getASTContext());
-                
-            // }
-            TranslationUnitDecl *TDecl = Ctx.getTranslationUnitDecl();
-            Visitor.TraverseAST(Ctx);
-        }
-		
-        void HandleInterestingDecl(DeclGroupRef DR) override {
-			for (DeclGroupRef::iterator b = DR.begin(), e = DR.end(); b != e; ++b) {
-				// Traverse the declaration using our AST visitor.
-                //llvm::outs() << (*b)->getDeclKindName();
-				// Visitor.TraverseDecl(*b);
-                // Visitor.VisitAllDecl(*b);
-				//(*b)->dump();
-			}
+            DeclContext::decl_range Decls = Ctx.getTranslationUnitDecl()->decls();
+            for(DeclContext::decl_iterator b=Decls.begin(), e=Decls.end(); b!=e; ++b) {
+                std::string loc = (*b)->getLocation().printToString(C.getSourceManager());
+                std::string filename = loc.substr(0,loc.find(':'));
+                //llvm::outs() << filename << "\n";
+                if(std::regex_match(filename, std::regex("(.|\n)*\.h"))){
+                    llvm::errs() << "Header files!\n";
+                }
+                else{
+                    Visitor.TraverseDecl(*b);
+                }
+            }
+            // TranslationUnitDecl *TDecl = Ctx.getTranslationUnitDecl();
+
+            // Visitor.TraverseAST(Ctx);
         }
         
 	private:
 		MyASTVisitor Visitor;
+        ASTContext &C;
 };
 
 // For each source file provided to the tool, a new FrontendAction is created.

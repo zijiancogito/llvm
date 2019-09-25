@@ -64,7 +64,7 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
                         //llvm::outs() << "localvar:\t";
                         if(tmpnd->hasBody()){
                             llvm::outs() << "ParmDecl:\t";
-                            llvm::outs() << tmpnd->getNameAsString()<< ":\t";
+                            llvm::outs() << tmpnd->getNameAsString()<< "\t";
                             llvm::outs() << nd->getDeclKindName() << "\t";
                             llvm::outs() << nd->getQualifiedNameAsString() << "\t";
                             llvm::outs() << TheContext.getSourceManager().getFileOffset(nd->getLocation()) << '\n';

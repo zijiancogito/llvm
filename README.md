@@ -4,3 +4,4 @@
 - clang-func-cfg
 - clang-functions-cfg
 - PrintFunctionNames
+- clang-yaml
